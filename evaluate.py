@@ -19,8 +19,9 @@ def metrics(model, test_loader, top_k):
 	HR, NDCG = [], []
 
 	for user, item, label in test_loader:
-		user = user.cuda()
-		item = item.cuda()
+		device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+		user = user.to(device)
+		item = item.to(device)
 
 		predictions = model(user, item)
 		_, indices = torch.topk(predictions, top_k)

@@ -1,0 +1,6 @@
+NeuMF-end | MLP Layers: 1 | HR@10 = 0.904 ± 0.005
+NeuMF-end | MLP Layers: 2 | HR@10 = 0.925 ± 0.005
+NeuMF-end | MLP Layers: 3 | HR@10 = 0.950 ± 0.004
+NeuMF-pre | MLP Layers: 1 | HR@10 = 0.856 ± 0.000
+NeuMF-pre | MLP Layers: 2 | HR@10 = 0.877 ± 0.000
+NeuMF-pre | MLP Layers: 3 | HR@10 = 0.910 ± 0.001

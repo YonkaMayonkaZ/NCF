@@ -1,19 +1,23 @@
+import os
 # dataset name 
-dataset = 'ml-1m'
-assert dataset in ['ml-1m', 'pinterest-20']
+dataset = 'u'
 
-# model name 
-model = 'NeuMF-end'
+# Model settings (Ensure this line exists)
+model = 'NeuMF-end'  # Options: ['MLP', 'GMF', 'NeuMF-end', 'NeuMF-pre']
 assert model in ['MLP', 'GMF', 'NeuMF-end', 'NeuMF-pre']
 
-# paths
-main_path = '/home/share/guoyangyang/recommendation/NCF-Data/'
+# paths - use the mounted dataset
+train_rating = "/app/u.train.rating"
+test_rating = "/app/u.test.rating"
+test_negative = "/app/u.test.negative"
 
-train_rating = main_path + '{}.train.rating'.format(dataset)
-test_rating = main_path + '{}.test.rating'.format(dataset)
-test_negative = main_path + '{}.test.negative'.format(dataset)
+model_path = "/app/models/"
 
-model_path = './models/'
+# Ensure the directory exists
+if not os.path.exists(model_path):
+    os.makedirs(model_path)
 GMF_model_path = model_path + 'GMF.pth'
 MLP_model_path = model_path + 'MLP.pth'
 NeuMF_model_path = model_path + 'NeuMF.pth'
+
+gpu = "-1"
