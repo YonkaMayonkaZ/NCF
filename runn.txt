@@ -1,0 +1,1 @@
+docker run --gpus all --rm -it -v "$PWD":/app ncf-docker /bin/bash
