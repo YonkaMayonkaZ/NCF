@@ -283,8 +283,8 @@ class Question2Experiment:
                 'num_runs': len(hrs)
             }
             
-            print(f"{config_name:20s}: HR@10={np.mean(hrs):.4f}±{np.std(hrs):.4f}, "
-                  f"NDCG@10={np.mean(ndcgs):.4f}±{np.std(ndcgs):.4f}, "
+            print(f"{config_name:20s}: HR@10={np.mean(hrs):.4f}+/-{np.std(hrs):.4f}, "
+                  f"NDCG@10={np.mean(ndcgs):.4f}+/-{np.std(ndcgs):.4f}, "
                   f"Params={params:,}")
         
         return analysis
@@ -397,8 +397,8 @@ class Question2Experiment:
                 config_name,
                 str(data['num_layers']),
                 'Yes' if data['pretraining'] else 'No',
-                f"{data['hr_mean']:.4f}±{data['hr_std']:.4f}",
-                f"{data['ndcg_mean']:.4f}±{data['ndcg_std']:.4f}",
+                f"{data['hr_mean']:.4f}+/-{data['hr_std']:.4f}",
+                f"{data['ndcg_mean']:.4f}+/-{data['ndcg_std']:.4f}",
                 f"{data['parameters']:,}"
             ]
             table_data.append(row)
@@ -494,7 +494,7 @@ def main():
     # Print summary
     print("\nExperiment Summary:")
     for config_name, data in results.items():
-        print(f"{config_name}: HR@10 = {data['hr_mean']:.4f}±{data['hr_std']:.4f}")
+        print(f"{config_name}: HR@10 = {data['hr_mean']:.4f}+/-{data['hr_std']:.4f}")
 
 if __name__ == "__main__":
     main()
