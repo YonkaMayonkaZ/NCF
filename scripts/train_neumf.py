@@ -85,7 +85,7 @@ def train_neumf(args, device):
     # Setup training (use SGD for pretrained as in paper)
     criterion = nn.BCEWithLogitsLoss()
     if args.pretraining:
-        optimizer = optim.SGD(model.parameters(), lr=args.lr)
+        optimizer = optim.SGD(model.parameters(), lr=args.lr * 10)
     else:
         optimizer = optim.Adam(model.parameters(), lr=args.lr)
     
