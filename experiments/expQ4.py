@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Question 4: Training curves analysis using Q2 experiment results.
+Optimized version using project utilities.
 
 Greek: Show in 3 figures how (i) training loss, (ii) HR@10 and (iii) NDCG@10 
 are affected for each iteration/epoch when training the model.
@@ -10,7 +11,6 @@ This script analyzes the training histories from Q2 experiment results.
 
 import os
 import sys
-import json
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -18,63 +18,67 @@ from pathlib import Path
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+# Use project utilities
 from src.utils.config import config
-from src.utils.io import ensure_dir, save_json
+from src.utils.io import ensure_dir, save_json, load_json
+from src.utils.logging import get_experiment_logger
+from src.utils.visualization import plot_training_metrics, plot_comparative_metrics
 
 class Question4Experiment:
     def __init__(self):
+        """Initialize Q4 experiment with proper logging and config."""
         self.results = {}
+        self.training_curves = {}
+        self.logger = get_experiment_logger("question_4")
         
-        # Ensure output directories exist
+        # Ensure output directories exist using utility
         ensure_dir(config.figure_dir)
         ensure_dir(config.output_dir / "reports")
         
-        print("="*60)
-        print("QUESTION 4: TRAINING CURVES ANALYSIS FROM Q2 RESULTS")
-        print("="*60)
-        print("Analyzing training curves from Question 2 experiment results")
-        print("Metrics: (i) Training Loss, (ii) HR@10, (iii) NDCG@10 vs Epochs")
-        print("="*60)
+        self.logger.info("="*60)
+        self.logger.info("QUESTION 4: TRAINING CURVES ANALYSIS FROM Q2 RESULTS")
+        self.logger.info("="*60)
+        self.logger.info("Analyzing training curves from Question 2 experiment results")
+        self.logger.info("Metrics: (i) Training Loss, (ii) HR@10, (iii) NDCG@10 vs Epochs")
+        self.logger.info("="*60)
     
     def load_q2_results(self):
-        """Load results from Question 2 experiment."""
-        print("\n[STEP 1] Loading Q2 experiment results...")
+        """Load results from Question 2 experiment using io utilities."""
+        self.logger.info("Loading Q2 experiment results...")
         
         q2_results_path = config.output_dir / "reports" / "question_02_results.json"
         
         if not q2_results_path.exists():
-            print(f"ERROR: Q2 results not found at {q2_results_path}")
-            print("Please run Question 2 experiment first:")
-            print("python experiments/expQ2.py --runs 10 --epochs 20")
+            self.logger.error(f"Q2 results not found at {q2_results_path}")
+            self.logger.error("Please run Question 2 experiment first:")
+            self.logger.error("python experiments/expQ2.py --runs 10 --epochs 20")
             return False
         
         try:
-            with open(q2_results_path, 'r') as f:
-                self.q2_data = json.load(f)
+            # Use utility function instead of manual JSON loading
+            self.q2_data = load_json(q2_results_path)
             
-            print(f"Q2 results loaded from: {q2_results_path}")
+            self.logger.info(f"Q2 results loaded successfully from: {q2_results_path}")
             
-            # Check what configurations are available
-            print("\nAvailable configurations:")
+            # Log available configurations
+            self.logger.info("Available configurations:")
             for config_name in self.q2_data.keys():
                 num_runs = len(self.q2_data[config_name].get('runs', []))
-                print(f"  - {config_name}: {num_runs} runs")
+                self.logger.info(f"  - {config_name}: {num_runs} runs")
             
             return True
             
         except Exception as e:
-            print(f"ERROR loading Q2 results: {e}")
+            self.logger.error(f"Error loading Q2 results: {e}")
             return False
     
     def extract_training_histories(self):
         """Extract and process training histories from Q2 data."""
-        print("\n[STEP 2] Processing training histories...")
-        
-        self.training_curves = {}
+        self.logger.info("Processing training histories...")
         
         for config_name, config_data in self.q2_data.items():
             if 'runs' not in config_data or not config_data['runs']:
-                print(f"  Warning: No runs found for {config_name}")
+                self.logger.warning(f"No runs found for {config_name}")
                 continue
             
             histories = []
@@ -83,14 +87,14 @@ class Question4Experiment:
                     histories.append(run['history'])
             
             if not histories:
-                print(f"  Warning: No training histories found for {config_name}")
+                self.logger.warning(f"No training histories found for {config_name}")
                 continue
             
-            # Process the histories
+            # Process the histories using existing aggregation logic
             processed = self.process_histories(histories, config_name)
-            self.training_curves[config_name] = processed
-            
-            print(f"  Processed {config_name}: {len(histories)} runs, {len(processed['epochs'])} epochs")
+            if processed:
+                self.training_curves[config_name] = processed
+                self.logger.info(f"Processed {config_name}: {len(histories)} runs, {len(processed['epochs'])} epochs")
     
     def process_histories(self, histories, config_name):
         """Process multiple training histories to get mean and std."""
@@ -143,186 +147,152 @@ class Question4Experiment:
     
     def format_legend_label(self, config_name):
         """Convert config name to readable legend label."""
-        if config_name == '1layers_pretrain':
-            return '1 layer (pretraining)'
-        elif config_name == '1layers_scratch':
-            return '1 layer (scratch)'
-        elif config_name == '2layers_pretrain':
-            return '2 layers (pretraining)'
-        elif config_name == '2layers_scratch':
-            return '2 layers (scratch)'
-        elif config_name == '3layers_pretrain':
-            return '3 layers (pretraining)'
-        elif config_name == '3layers_scratch':
-            return '3 layers (scratch)'
-        else:
-            return config_name
+        label_mapping = {
+            '1layers_pretrain': '1 layer (pretraining)',
+            '1layers_scratch': '1 layer (scratch)',
+            '2layers_pretrain': '2 layers (pretraining)',
+            '2layers_scratch': '2 layers (scratch)',
+            '3layers_pretrain': '3 layers (pretraining)',
+            '3layers_scratch': '3 layers (scratch)'
+        }
+        return label_mapping.get(config_name, config_name)
     
     def create_training_curves_plots(self):
         """Create the three plots as required by Question 4."""
-        print("\n[STEP 3] Creating training curves plots...")
+        self.logger.info("Creating training curves plots...")
         
         # Create the three subplots as shown in Figure 6 of the paper
         fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 6))
         
-        # Colors for different configurations
-        colors = {
-            '1layers_pretrain': 'blue',
-            '1layers_scratch': 'orange', 
-            '2layers_pretrain': 'green',
-            '2layers_scratch': 'red',
-            '3layers_pretrain': 'purple',
-            '3layers_scratch': 'brown'
-        }
-        
-        # Line styles for distinction
-        line_styles = {
-            '1layers_pretrain': '-',
-            '1layers_scratch': '--',
-            '2layers_pretrain': '-',
-            '2layers_scratch': '--',
-            '3layers_pretrain': '-',
-            '3layers_scratch': '--'
-        }
+        # Color and line style configuration
+        plot_config = self._get_plot_configuration()
         
         # Plot 1: Training Loss vs Epoch
-        for config_name, curve_data in self.training_curves.items():
-            epochs = curve_data['epochs']
-            loss_mean = curve_data['loss']['mean']
-            loss_std = curve_data['loss']['std']
-            
-            color = colors.get(config_name, 'gray')
-            linestyle = line_styles.get(config_name, '-')
-            label = self.format_legend_label(config_name)
-            
-            ax1.plot(epochs, loss_mean, color=color, linestyle=linestyle, linewidth=2, label=label)
-            ax1.fill_between(epochs, 
-                           [m - s for m, s in zip(loss_mean, loss_std)],
-                           [m + s for m, s in zip(loss_mean, loss_std)],
-                           color=color, alpha=0.2)
-        
-        ax1.set_xlabel('Epoch')
-        ax1.set_ylabel('Training Loss')
-        ax1.set_title('(i) Training Loss vs Epoch')
-        ax1.legend()
-        ax1.grid(True, alpha=0.3)
+        self._plot_metric_curves(ax1, 'loss', 'Training Loss', '(i) Training Loss vs Epoch', plot_config)
         
         # Plot 2: HR@10 vs Epoch
-        for config_name, curve_data in self.training_curves.items():
-            epochs = curve_data['epochs']
-            hr_mean = curve_data['hr']['mean']
-            hr_std = curve_data['hr']['std']
-            
-            color = colors.get(config_name, 'gray')
-            linestyle = line_styles.get(config_name, '-')
-            label = self.format_legend_label(config_name)
-            
-            ax2.plot(epochs, hr_mean, color=color, linestyle=linestyle, linewidth=2, label=label)
-            ax2.fill_between(epochs,
-                           [m - s for m, s in zip(hr_mean, hr_std)],
-                           [m + s for m, s in zip(hr_mean, hr_std)],
-                           color=color, alpha=0.2)
-        
-        ax2.set_xlabel('Epoch')
-        ax2.set_ylabel('HR@10')
-        ax2.set_title('(ii) HR@10 vs Epoch')
-        ax2.legend()
-        ax2.grid(True, alpha=0.3)
+        self._plot_metric_curves(ax2, 'hr', 'HR@10', '(ii) HR@10 vs Epoch', plot_config)
         
         # Plot 3: NDCG@10 vs Epoch
-        for config_name, curve_data in self.training_curves.items():
-            epochs = curve_data['epochs']
-            ndcg_mean = curve_data['ndcg']['mean']
-            ndcg_std = curve_data['ndcg']['std']
-            
-            color = colors.get(config_name, 'gray')
-            linestyle = line_styles.get(config_name, '-')
-            label = self.format_legend_label(config_name)
-            
-            ax3.plot(epochs, ndcg_mean, color=color, linestyle=linestyle, linewidth=2, label=label)
-            ax3.fill_between(epochs,
-                           [m - s for m, s in zip(ndcg_mean, ndcg_std)],
-                           [m + s for m, s in zip(ndcg_mean, ndcg_std)],
-                           color=color, alpha=0.2)
-        
-        ax3.set_xlabel('Epoch')
-        ax3.set_ylabel('NDCG@10')
-        ax3.set_title('(iii) NDCG@10 vs Epoch')
-        ax3.legend()
-        ax3.grid(True, alpha=0.3)
+        self._plot_metric_curves(ax3, 'ndcg', 'NDCG@10', '(iii) NDCG@10 vs Epoch', plot_config)
         
         plt.tight_layout()
         
-        # Save plot
+        # Save plot using config paths
         plot_path = config.figure_dir / "question_04_training_curves.png"
         plt.savefig(plot_path, dpi=300, bbox_inches='tight')
         plt.close()
         
-        print(f"Training curves plot saved to: {plot_path}")
+        self.logger.info(f"Training curves plot saved to: {plot_path}")
     
-    def create_individual_plots(self):
-        """Create individual plots for each metric (better readability)."""
-        print("\n[STEP 4] Creating individual metric plots...")
+    def _get_plot_configuration(self):
+        """Get consistent plot configuration for all metrics."""
+        return {
+            'colors': {
+                '1layers_pretrain': 'blue',
+                '1layers_scratch': 'orange', 
+                '2layers_pretrain': 'green',
+                '2layers_scratch': 'red',
+                '3layers_pretrain': 'purple',
+                '3layers_scratch': 'brown'
+            },
+            'line_styles': {
+                '1layers_pretrain': '-',
+                '1layers_scratch': '--',
+                '2layers_pretrain': '-',
+                '2layers_scratch': '--',
+                '3layers_pretrain': '-',
+                '3layers_scratch': '--'
+            }
+        }
+    
+    def _plot_metric_curves(self, ax, metric_key, ylabel, title, plot_config):
+        """Plot curves for a specific metric on given axes."""
+        for config_name, curve_data in self.training_curves.items():
+            epochs = curve_data['epochs']
+            values_mean = curve_data[metric_key]['mean']
+            values_std = curve_data[metric_key]['std']
+            
+            color = plot_config['colors'].get(config_name, 'gray')
+            linestyle = plot_config['line_styles'].get(config_name, '-')
+            label = self.format_legend_label(config_name)
+            
+            ax.plot(epochs, values_mean, color=color, linestyle=linestyle, 
+                   linewidth=2, label=label)
+            ax.fill_between(epochs, 
+                           [m - s for m, s in zip(values_mean, values_std)],
+                           [m + s for m, s in zip(values_mean, values_std)],
+                           color=color, alpha=0.2)
         
-        metrics = [
+        ax.set_xlabel('Epoch')
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+    
+    def create_individual_plots_using_utils(self):
+        """Create individual plots using existing visualization utilities."""
+        self.logger.info("Creating individual metric plots using visualization utils...")
+        
+        # Prepare data in format expected by visualization utilities
+        for metric_key, metric_name, ylabel in [
             ('loss', 'Training Loss', 'Training Loss'),
             ('hr', 'HR@10', 'Hit Ratio @ 10'),
             ('ndcg', 'NDCG@10', 'NDCG @ 10')
-        ]
-        
-        colors = {
-            '1layers_pretrain': 'blue',
-            '1layers_scratch': 'orange', 
-            '2layers_pretrain': 'green',
-            '2layers_scratch': 'red',
-            '3layers_pretrain': 'purple',
-            '3layers_scratch': 'brown'
-        }
-        
-        line_styles = {
-            '1layers_pretrain': '-',
-            '1layers_scratch': '--',
-            '2layers_pretrain': '-',
-            '2layers_scratch': '--',
-            '3layers_pretrain': '-',
-            '3layers_scratch': '--'
-        }
-        
-        for metric_key, metric_name, ylabel in metrics:
-            fig, ax = plt.subplots(figsize=(10, 6))
+        ]:
+            # Convert our data format to the format expected by visualization utils
+            run_histories_list = []
+            model_names = []
             
             for config_name, curve_data in self.training_curves.items():
+                # Convert back to run format for visualization utility
                 epochs = curve_data['epochs']
-                values_mean = curve_data[metric_key]['mean']
-                values_std = curve_data[metric_key]['std']
+                mean_values = curve_data[metric_key]['mean']
                 
-                color = colors.get(config_name, 'gray')
-                linestyle = line_styles.get(config_name, '-')
-                label = self.format_legend_label(config_name)
+                # Create synthetic runs for visualization (using means as single runs)
+                synthetic_history = []
+                for epoch, value in zip(epochs, mean_values):
+                    synthetic_history.append({
+                        'epoch': epoch,
+                        metric_key: value
+                    })
                 
-                ax.plot(epochs, values_mean, color=color, linestyle=linestyle, 
-                       linewidth=2, label=label)
-                ax.fill_between(epochs,
-                               [m - s for m, s in zip(values_mean, values_std)],
-                               [m + s for m, s in zip(values_mean, values_std)],
-                               color=color, alpha=0.2)
+                run_histories_list.append([synthetic_history])
+                model_names.append(self.format_legend_label(config_name))
             
-            ax.set_xlabel('Epoch')
-            ax.set_ylabel(ylabel)
-            ax.set_title(f'Question 4: {metric_name} vs Epoch')
-            ax.legend()
-            ax.grid(True, alpha=0.3)
-            
-            # Save individual plot
-            plot_path = config.figure_dir / f"question_04_{metric_key}_curves.png"
-            plt.savefig(plot_path, dpi=300, bbox_inches='tight')
-            plt.close()
-            
-            print(f"{metric_name} plot saved to: {plot_path}")
+            # Use existing visualization utility
+            if run_histories_list:  # Only if we have data
+                output_path = config.figure_dir / f"question_04_{metric_key}_curves.png"
+                try:
+                    plot_comparative_metrics(
+                        run_histories_list=run_histories_list,
+                        model_names=model_names,
+                        output_path=output_path,
+                        metrics=[metric_key],
+                        metric_labels={metric_key: ylabel}
+                    )
+                    self.logger.info(f"{metric_name} plot saved using utils")
+                except Exception as e:
+                    self.logger.warning(f"Could not use visualization utils for {metric_key}: {e}")
+                    # Fallback to manual plotting
+                    self._create_individual_plot_manual(metric_key, metric_name, ylabel)
+    
+    def _create_individual_plot_manual(self, metric_key, metric_name, ylabel):
+        """Fallback manual plotting if utils don't work."""
+        fig, ax = plt.subplots(figsize=(10, 6))
+        plot_config = self._get_plot_configuration()
+        
+        self._plot_metric_curves(ax, metric_key, ylabel, f'Question 4: {metric_name} vs Epoch', plot_config)
+        
+        plot_path = config.figure_dir / f"question_04_{metric_key}_curves.png"
+        plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        self.logger.info(f"{metric_name} plot saved to: {plot_path}")
     
     def analyze_convergence(self):
         """Analyze convergence patterns from the training curves."""
-        print("\n[STEP 5] Analyzing convergence patterns...")
+        self.logger.info("Analyzing convergence patterns...")
         
         convergence_analysis = {}
         
@@ -354,16 +324,16 @@ class Question4Experiment:
                 'final_loss': loss_mean[-1]
             }
             
-            print(f"  {config_name}:")
-            print(f"    Best HR@10: {best_hr:.4f} at epoch {best_hr_epoch}")
-            print(f"    Lowest loss: {lowest_loss:.4f} at epoch {lowest_loss_epoch}")
-            print(f"    Early convergence: {early_convergence}")
+            self.logger.info(f"  {config_name}:")
+            self.logger.info(f"    Best HR@10: {best_hr:.4f} at epoch {best_hr_epoch}")
+            self.logger.info(f"    Lowest loss: {lowest_loss:.4f} at epoch {lowest_loss_epoch}")
+            self.logger.info(f"    Early convergence: {early_convergence}")
         
         return convergence_analysis
     
     def save_results(self, convergence_analysis):
-        """Save results to JSON file."""
-        print("\n[STEP 6] Saving results...")
+        """Save results using io utilities."""
+        self.logger.info("Saving results using io utilities...")
         
         # Prepare results
         results = {
@@ -376,15 +346,32 @@ class Question4Experiment:
             }
         }
         
-        # Save detailed results
+        # Save detailed results using utility
         results_path = config.output_dir / "reports" / "question_04_results.json"
         save_json(results, results_path)
         
-        print(f"Results saved to: {results_path}")
+        # Save a simplified summary for easy reading
+        summary = {
+            'convergence_summary': convergence_analysis,
+            'total_configurations': len(self.training_curves),
+            'metrics_count': 3,
+            'generated_plots': [
+                'question_04_training_curves.png',
+                'question_04_loss_curves.png', 
+                'question_04_hr_curves.png',
+                'question_04_ndcg_curves.png'
+            ]
+        }
+        
+        summary_path = config.output_dir / "reports" / "question_04_summary.json"
+        save_json(summary, summary_path)
+        
+        self.logger.info(f"Detailed results saved to: {results_path}")
+        self.logger.info(f"Summary saved to: {summary_path}")
     
     def run_experiment(self):
         """Run the complete Question 4 experiment."""
-        print("Starting Question 4 experiment...")
+        self.logger.info("Starting Question 4 experiment...")
         
         # Step 1: Load Q2 results
         if not self.load_q2_results():
@@ -394,48 +381,58 @@ class Question4Experiment:
         self.extract_training_histories()
         
         if not self.training_curves:
-            print("ERROR: No training curves found in Q2 results")
+            self.logger.error("No training curves found in Q2 results")
             return None
         
-        # Step 3: Create plots
+        # Step 3: Create main plots
         self.create_training_curves_plots()
         
-        # Step 4: Create individual plots
-        self.create_individual_plots()
+        # Step 4: Create individual plots using utilities
+        self.create_individual_plots_using_utils()
         
         # Step 5: Analyze convergence
         convergence_analysis = self.analyze_convergence()
         
-        # Step 6: Save results
+        # Step 6: Save results using utilities
         self.save_results(convergence_analysis)
         
-        print("\n" + "="*60)
-        print("QUESTION 4 EXPERIMENT COMPLETED!")
-        print("="*60)
-        print("Generated files:")
-        print(f"- {config.figure_dir}/question_04_training_curves.png")
-        print(f"- {config.figure_dir}/question_04_loss_curves.png")
-        print(f"- {config.figure_dir}/question_04_hr_curves.png")
-        print(f"- {config.figure_dir}/question_04_ndcg_curves.png")
-        print(f"- {config.output_dir}/reports/question_04_results.json")
-        print("="*60)
+        self.logger.info("="*60)
+        self.logger.info("QUESTION 4 EXPERIMENT COMPLETED!")
+        self.logger.info("="*60)
+        self.logger.info("Generated files:")
+        self.logger.info(f"- {config.figure_dir}/question_04_training_curves.png")
+        self.logger.info(f"- {config.figure_dir}/question_04_loss_curves.png")
+        self.logger.info(f"- {config.figure_dir}/question_04_hr_curves.png")
+        self.logger.info(f"- {config.figure_dir}/question_04_ndcg_curves.png")
+        self.logger.info(f"- {config.output_dir}/reports/question_04_results.json")
+        self.logger.info(f"- {config.output_dir}/reports/question_04_summary.json")
+        self.logger.info("="*60)
         
         return self.training_curves
 
 def main():
+    """Main function with proper error handling and logging."""
     print("Question 4: Training Curves Analysis")
     print("Analyzing training histories from Q2 experiment results")
     
-    # Create and run experiment
-    experiment = Question4Experiment()
-    results = experiment.run_experiment()
+    try:
+        # Create and run experiment
+        experiment = Question4Experiment()
+        results = experiment.run_experiment()
+        
+        if results:
+            print("\n✅ SUCCESS: Training curves analysis completed!")
+            print("📊 Check the figures directory for the three required plots.")
+            print("📝 Check the reports directory for detailed analysis.")
+        else:
+            print("\n❌ FAILED: Could not complete analysis.")
+            print("💡 Make sure Q2 experiment has been run first:")
+            print("   python experiments/expQ2.py --runs 10 --epochs 20")
     
-    if results:
-        print("\nSUCCESS: Training curves analysis completed!")
-        print("Check the figures directory for the three required plots.")
-    else:
-        print("\nFAILED: Could not complete analysis.")
-        print("Make sure Q2 experiment has been run first.")
+    except Exception as e:
+        print(f"\n💥 CRITICAL ERROR: {e}")
+        print("🔍 Check the logs for more details.")
+        raise
 
 if __name__ == "__main__":
     main()

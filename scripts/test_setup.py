@@ -237,7 +237,7 @@ def main():
     
     passed = 0
     for test_name, result in results:
-        status = " PASSED" if result else "❌ FAILED"
+        status = " PASSED" if result else " FAILED"
         print(f"{test_name}: {status}")
         if result:
             passed += 1
