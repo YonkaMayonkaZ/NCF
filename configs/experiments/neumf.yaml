@@ -1,0 +1,24 @@
+data:
+  raw_data: "data/raw/u.data"
+  train_rating: "data/processed/u.train.rating"
+  test_rating: "data/processed/u.test.rating"
+  test_negative: "data/processed/u.test.negative"
+model:
+  user_num: 943
+  item_num: 1682
+  factor_num: 32
+  num_layers: 3
+  dropout: 0.0
+  type: "NeuMF-end"
+training:
+  batch_size: 256
+  epochs: 20
+  lr: 0.001
+  num_ng: 4
+  test_num_ng: 99
+  top_k: 10
+distillation:
+  temperature: 2.0
+  alpha: 0.5
+output:
+  dir: "results"
