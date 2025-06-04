@@ -1,8 +1,0 @@
-{
-  "preprocessing": {
-    "num_users": 944,
-    "num_items": 1683,
-    "interactions": 100000,
-    "test_users": 943
-  }
-}
