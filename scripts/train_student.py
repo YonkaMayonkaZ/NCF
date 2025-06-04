@@ -12,7 +12,12 @@ from src.ncf.models import NCF
 from src.utils.config import config
 from src.training.metrics import metrics
 from src.data.datasets import load_all, NCFData
-from src.distillation.response import ResponseDistillation
+from src.distillation import (
+    ResponseDistillation,
+    FeatureDistillation,
+    AttentionDistillation,
+    UnifiedDistillation,
+)
 
 # ------------------ Argument Parsing ------------------ #
 parser = argparse.ArgumentParser()
@@ -35,6 +40,25 @@ parser.add_argument("--student_model", type=str, default="NeuMF-end",
                     help="Student model type")
 parser.add_argument("--temperature", type=float, default=config.temperature, help="Temperature for distillation")
 parser.add_argument("--alpha", type=float, default=config.alpha, help="Weight for BCE vs KD loss")
+parser.add_argument(
+    "--beta",
+    type=float,
+    default=0.3,
+    help="Weight for feature distillation loss",
+)
+parser.add_argument(
+    "--gamma",
+    type=float,
+    default=0.2,
+    help="Weight for attention distillation loss",
+)
+parser.add_argument(
+    "--distillation",
+    type=str,
+    default="response",
+    choices=["response", "feature", "attention", "unified"],
+    help="Distillation strategy to use",
+)
 args = parser.parse_args()
 
 # ------------------ Set GPU/CPU ------------------ #
@@ -69,13 +93,48 @@ student_model = NCF(user_num, item_num, args.factor_num, args.num_layers, args.d
 student_model.to(device)
 
 # ------------------ Distillation Setup ------------------ #
-distillation = ResponseDistillation(teacher_model, student_model, temperature=args.temperature, alpha=args.alpha)
+if args.distillation == "response":
+    distillation = ResponseDistillation(
+        teacher_model,
+        student_model,
+        temperature=args.temperature,
+        alpha=args.alpha,
+    )
+elif args.distillation == "feature":
+    distillation = FeatureDistillation(
+        teacher_model,
+        student_model,
+        temperature=args.temperature,
+        alpha=args.alpha,
+        beta=args.beta,
+    )
+elif args.distillation == "attention":
+    distillation = AttentionDistillation(
+        teacher_model,
+        student_model,
+        temperature=args.temperature,
+        alpha=args.alpha,
+        gamma=args.gamma,
+    )
+else:
+    distillation = UnifiedDistillation(
+        teacher_model,
+        student_model,
+        temperature=args.temperature,
+        alpha=args.alpha,
+        beta=args.beta,
+        gamma=args.gamma,
+    )
+
 distillation.to(device)
 
 optimizer = optim.Adam(student_model.parameters(), lr=args.lr)
 
 # ------------------ TensorBoard Setup ------------------ #
-writer = SummaryWriter(log_dir=config.log_dir / f"student_{args.student_model}_{time.strftime('%Y%m%d_%H%M%S')}")
+writer = SummaryWriter(
+    log_dir=config.log_dir
+    / f"student_{args.student_model}_{args.distillation}_{time.strftime('%Y%m%d_%H%M%S')}"
+)
 
 # ------------------ Training ------------------ #
 count, best_hr, best_ndcg, best_epoch = 0, 0, 0, 0
