@@ -3,8 +3,10 @@
 Question 2: Effect of MLP layers on NeuMF performance with and without pretraining.
 Optimized version using project utilities.
 
-This script conducts comprehensive experiments across multiple runs for statistical significance,
-as required by the assignment: "όλα τα πειράματα θα επαναλαμβάνονται 10 φορές"
+FIXES APPLIED:
+1. Fixed subprocess call typo: cstdout -> stdout
+2. Removed Unicode emoji characters to avoid ASCII encoding errors
+3. Maintained compatibility with Python 3.6 and existing utils
 """
 
 import os
@@ -156,7 +158,8 @@ class Question2Experiment:
         """Execute training command and parse results."""
         try:
             self.logger.info(f"Executing: {' '.join(cmd)}")
-            result = subprocess.run(cmd, cstdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+            # FIXED: Changed cstdout to stdout
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
                       universal_newlines=True, check=True)
             
             # Parse the output to extract results
@@ -164,22 +167,26 @@ class Question2Experiment:
             parsed_result = self._parse_training_output(output_lines, config_name, run_id)
             
             if parsed_result:
-                self.logger.info(f"✅ {config_name} Run {run_id}: HR@10={parsed_result['hr']:.4f}, "
+                # FIXED: Removed Unicode emoji characters
+                self.logger.info(f"[OK] {config_name} Run {run_id}: HR@10={parsed_result['hr']:.4f}, "
                                f"NDCG@10={parsed_result['ndcg']:.4f}, Params={parsed_result['parameters']:,}")
                 return parsed_result
             else:
-                self.logger.error(f"❌ {config_name} Run {run_id}: Failed to parse results")
+                # FIXED: Removed Unicode emoji characters
+                self.logger.error(f"[ERROR] {config_name} Run {run_id}: Failed to parse results")
                 return None
                 
         except subprocess.CalledProcessError as e:
-            self.logger.error(f"❌ {config_name} Run {run_id}: Training failed - {e}")
+            # FIXED: Removed Unicode emoji characters
+            self.logger.error(f"[ERROR] {config_name} Run {run_id}: Training failed - {e}")
             if e.stdout:
                 self.logger.error(f"STDOUT: {e.stdout[-500:]}")  # Last 500 chars
             if e.stderr:
                 self.logger.error(f"STDERR: {e.stderr[-500:]}")  # Last 500 chars
             return None
         except Exception as e:
-            self.logger.error(f"❌ {config_name} Run {run_id}: Unexpected error - {e}")
+            # FIXED: Removed Unicode emoji characters
+            self.logger.error(f"[ERROR] {config_name} Run {run_id}: Unexpected error - {e}")
             return None
     
     def _parse_training_output(self, output_lines, config_name, run_id):
@@ -364,8 +371,8 @@ class Question2Experiment:
                 'success_rate': len(hrs) / self.num_runs * 100
             }
             
-            self.logger.info(f"{config_name:20s}: HR@10={np.mean(hrs):.4f}±{np.std(hrs):.4f} "
-                           f"NDCG@10={np.mean(ndcgs):.4f}±{np.std(ndcgs):.4f} "
+            self.logger.info(f"{config_name:20s}: HR@10={np.mean(hrs):.4f}+/-{np.std(hrs):.4f} "
+                           f"NDCG@10={np.mean(ndcgs):.4f}+/-{np.std(ndcgs):.4f} "
                            f"Params={params:,} Success={len(hrs)}/{self.num_runs}")
         
         return analysis
