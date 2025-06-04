@@ -14,8 +14,11 @@ from src.training.metrics import metrics
 from src.data.datasets import load_all, NCFData
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 from src.distillation.response import ResponseDistillation
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 from src.distillation import (
@@ -25,6 +28,9 @@ from src.distillation import (
     UnifiedDistillation,
 )
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -52,7 +58,10 @@ parser.add_argument("--temperature", type=float, default=config.temperature, hel
 parser.add_argument("--alpha", type=float, default=config.alpha, help="Weight for BCE vs KD loss")
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 parser.add_argument(
@@ -75,6 +84,9 @@ parser.add_argument(
     help="Distillation strategy to use",
 )
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -112,6 +124,7 @@ student_model = NCF(user_num, item_num, args.factor_num, args.num_layers, args.d
 student_model.to(device)
 
 # ------------------ Distillation Setup ------------------ #
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 distillation = ResponseDistillation(teacher_model, student_model, temperature=args.temperature, alpha=args.alpha)
@@ -190,6 +203,41 @@ else:
     )
 
 >>>>>>> Stashed changes
+=======
+if args.distillation == "response":
+    distillation = ResponseDistillation(
+        teacher_model,
+        student_model,
+        temperature=args.temperature,
+        alpha=args.alpha,
+    )
+elif args.distillation == "feature":
+    distillation = FeatureDistillation(
+        teacher_model,
+        student_model,
+        temperature=args.temperature,
+        alpha=args.alpha,
+        beta=args.beta,
+    )
+elif args.distillation == "attention":
+    distillation = AttentionDistillation(
+        teacher_model,
+        student_model,
+        temperature=args.temperature,
+        alpha=args.alpha,
+        gamma=args.gamma,
+    )
+else:
+    distillation = UnifiedDistillation(
+        teacher_model,
+        student_model,
+        temperature=args.temperature,
+        alpha=args.alpha,
+        beta=args.beta,
+        gamma=args.gamma,
+    )
+
+>>>>>>> Stashed changes
 distillation.to(device)
 
 optimizer = optim.Adam(student_model.parameters(), lr=args.lr)
@@ -200,6 +248,9 @@ writer = SummaryWriter(
     / f"student_{args.student_model}_{args.distillation}_{time.strftime('%Y%m%d_%H%M%S')}"
 )
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
