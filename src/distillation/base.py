@@ -26,11 +26,11 @@ class BaseDistillation(nn.Module):
     
     def knowledge_distillation_loss(self, teacher_logits, student_logits):
         """Compute KL divergence loss between teacher and student."""
-        teacher_probs = F.softmax(teacher_logits / self.temperature, dim=-1)
-        student_log_probs = F.log_softmax(student_logits / self.temperature, dim=-1)
-        
+        teacher_probs = torch.sigmoid(teacher_logits / self.temperature)
+        student_probs = torch.sigmoid(student_logits / self.temperature)
+
         # KL divergence loss
-        kd_loss = F.kl_div(student_log_probs, teacher_probs, reduction='batchmean')
+        kd_loss = F.mse_loss(student_probs, teacher_probs)
         return kd_loss * (self.temperature ** 2)
     
     def task_loss(self, predictions, labels):

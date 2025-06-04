@@ -4,8 +4,8 @@ data:
   test_rating: "data/processed/u.test.rating"
   test_negative: "data/processed/u.test.negative"
 model:
-  user_num: 943
-  item_num: 1682
+  user_num: 944
+  item_num: 1683
   factor_num: 32
   num_layers: 3
   dropout: 0.0

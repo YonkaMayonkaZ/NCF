@@ -1,0 +1,8 @@
+{
+  "basic_stats": {
+    "num_users": 943,
+    "num_items": 1679,
+    "num_interactions": 99057,
+    "sparsity": 0.9374362485370717
+  }
+}

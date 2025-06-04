@@ -29,8 +29,8 @@ def train_teacher(model_type, user_num, item_num, train_mat, device, args):
     
     # Load pretrained weights for NeuMF-pre
     if model_type == "NeuMF-pre":
-        gmf_path = config.model_dir / "GMF_best.pth"
-        mlp_path = config.model_dir / "MLP_best.pth"
+        gmf_path = config.model_dir / f"GMF_{args.factor_num}f_best.pth"
+        mlp_path = config.model_dir / f"MLP_{args.num_layers}l_{args.factor_num}f_best.pth"
         if gmf_path.exists() and mlp_path.exists():
             gmf_state = torch.load(gmf_path)
             mlp_state = torch.load(mlp_path)
