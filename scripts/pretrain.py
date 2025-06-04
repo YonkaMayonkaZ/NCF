@@ -163,5 +163,12 @@ def main():
     print(f"NDCG@{args.top_k}: {best_ndcg:.4f}")
     print(f"Parameters: {param_count:,}")
 
+    # Output results in format expected by factor_exp.py
+    print(f"\n--- RESULTS ---")
+    print(f"HR@{args.top_k}: {best_hr:.6f}")
+    print(f"NDCG@{args.top_k}: {best_ndcg:.6f}")
+    print(f"Parameters: {param_count}")
+    print(f"--- END RESULTS ---")
+
 if __name__ == "__main__":
     main()
