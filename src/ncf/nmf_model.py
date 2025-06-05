@@ -139,6 +139,9 @@ class NMFEvaluator:
         hits = []
         ndcgs = []
         
+        # Set random seed for reproducible negative sampling
+        np.random.seed(42)
+        
         # Group test data by user
         user_test_items = {}
         for user, item in self.test_data:
@@ -146,30 +149,40 @@ class NMFEvaluator:
                 user_test_items[user] = []
             user_test_items[user].append(item)
         
+        print(f"Evaluating {len(user_test_items)} users with test data...")
+        
         for user_id, test_items in user_test_items.items():
+            # Skip users not in training matrix
+            if user_id >= self.train_matrix.shape[0]:
+                continue
+                
             # Get items this user has interacted with in training
-            if user_id < self.train_matrix.shape[0]:
-                seen_items = set(self.train_matrix[user_id].nonzero()[1])
-            else:
-                seen_items = set()
+            seen_items = set(self.train_matrix[user_id].nonzero()[1])
             
             # For each test item, evaluate in the context of 99 negative samples
-            # (following NCF evaluation protocol)
             for test_item in test_items:
+                # Skip if test item was seen in training (shouldn't happen but safety check)
+                if test_item in seen_items:
+                    continue
+                
                 # Create candidate set: test_item + 99 negative samples
-                negative_items = []
                 item_pool = set(range(self.train_matrix.shape[1])) - seen_items - {test_item}
                 
-                if len(item_pool) >= 99:
-                    negative_items = np.random.choice(list(item_pool), 99, replace=False)
-                else:
+                if len(item_pool) < 99:
+                    # If not enough negatives, use all available
                     negative_items = list(item_pool)
+                else:
+                    negative_items = np.random.choice(list(item_pool), 99, replace=False)
                 
                 candidate_items = [test_item] + list(negative_items)
                 
                 # Get predictions for candidate items
                 user_ids = [user_id] * len(candidate_items)
-                predictions = self.model.predict(user_ids, candidate_items)
+                try:
+                    predictions = self.model.predict(user_ids, candidate_items)
+                except Exception as e:
+                    print(f"Error predicting for user {user_id}: {e}")
+                    continue
                 
                 # Rank items by prediction scores
                 item_score_pairs = list(zip(candidate_items, predictions))
@@ -178,16 +191,24 @@ class NMFEvaluator:
                 # Find position of test item
                 ranked_items = [item for item, score in item_score_pairs]
                 
-                # Calculate metrics
-                if test_item in ranked_items[:self.top_k]:
-                    hits.append(1)
-                    # Calculate NDCG
+                try:
                     position = ranked_items.index(test_item)
-                    ndcg = 1.0 / np.log2(position + 2)  # +2 because positions are 0-indexed
+                except ValueError:
+                    print(f"Test item {test_item} not found in ranked items for user {user_id}")
+                    continue
+                
+                # Calculate metrics
+                if position < self.top_k:  # 0-indexed, so < top_k means in top-k
+                    hits.append(1)
+                    # Calculate NDCG (position is 0-indexed)
+                    ndcg = 1.0 / np.log2(position + 2)  # +2 because log2(1) = 0
                     ndcgs.append(ndcg)
                 else:
                     hits.append(0)
                     ndcgs.append(0)
+        
+        print(f"Evaluated {len(hits)} test cases")
+        print(f"Hits: {sum(hits)}/{len(hits)} = {sum(hits)/len(hits):.4f}")
         
         hr = np.mean(hits) if hits else 0
         ndcg = np.mean(ndcgs) if ndcgs else 0
@@ -210,7 +231,7 @@ def run_nmf_experiment(train_matrix, test_data, n_components_list, num_runs=10):
     results = {}
     
     for n_comp in n_components_list:
-        print(f"\n Testing NMF with {n_comp} components...")
+        print(f"\nTesting NMF with {n_comp} components...")
         
         run_results = []
         
@@ -242,7 +263,7 @@ def run_nmf_experiment(train_matrix, test_data, n_components_list, num_runs=10):
             'parameters': params
         }
         
-        print(f" {n_comp} components: HR@10={np.mean(hrs):.4f}±{np.std(hrs):.4f}, "
-              f"NDCG@10={np.mean(ndcgs):.4f}±{np.std(ndcgs):.4f}, Params={params:,}")
+        print(f"{n_comp} components: HR@10={np.mean(hrs):.4f}+/-{np.std(hrs):.4f}, "
+              f"NDCG@10={np.mean(ndcgs):.4f}+/-{np.std(ndcgs):.4f}, Params={params:,}")
     
     return results
