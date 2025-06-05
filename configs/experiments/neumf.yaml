@@ -7,7 +7,7 @@ model:
   user_num: 944
   item_num: 1683
   factor_num: 32
-  num_layers: 3
+  num_layers: 2
   dropout: 0.0
   type: "NeuMF-end"
 training:
